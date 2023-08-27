@@ -5,38 +5,53 @@ pipeline {
         maven 'Maven'
     }
     environment {
-        MVN_VERSION = powershell(returnStdout: true, script: 'mvn help:evaluate -Dexpression=project.version -f springbootjava17/pom.xml -q -DforceStdout').trim()
+        MVN_VERSION = ''
     }
     stages {
         // stage('git checkout'){
         //     steps{
         //      git branch: 'main',url: 'https://github.com/MohitWadhwani/Cloud_DevSecOps.git'   
         //     }
-        // }  
-        stage("Build"){
+        // }
+        stage('Get Maven Version') {
             steps {
-                bat "mvn clean package -f springbootjava17/pom.xml" 
+                script {
+                    MVN_VERSION = powershell(returnStdout: true, script: '''
+                        $version=cmd /C "mvn help:evaluate -Dexpression=project.version -f springbootjava17/pom.xml -q -DforceStdout"
+                        Write-Output $version
+                    ''').trim()
+                }
             }
         }
+        stage("Build"){
+            steps {
+                bat "mvn clean package -f springbootjava17/pom.xml"
+            }
+        }
+        
         stage("build docker image"){
 		    steps {
-                bat "docker build -t 8458882343/springbootjava17:${MVN_VERSION} -f springbootjava17/Dockerfile ."
+		        script {
+		            dir('springbootjava17') {
+		                bat "docker build -t 8458882343/springbootjava17:${MVN_VERSION} -f Dockerfile ."
+		            }
+		        }
 		    }
-		}
-    //     stage("Push docker image"){
-		  //  steps {
-		  //      script {
-    //                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'LOGIN', usernameVariable: 'USER')]) {
-    //                     bat "docker login -u ${USER} -p ${LOGIN}"
-    //                     bat "docker push 8458882343/springbootjava17:${MVN_VERSION}"
-    //                 }   
-		  //      }
-    //         }
-    //     }
-    }
-    	post { 
-            success {
-                archiveArtifacts artifacts: '**/target/springbootjava17.jar', allowEmptyArchive: true
+        }
+        stage("Push docker image"){
+		   steps {
+		       script {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'LOGIN', usernameVariable: 'USER')]) {
+                        bat "docker login -u ${USER} -p ${LOGIN}"
+                        bat "docker push 8458882343/springbootjava17:${MVN_VERSION}"
+                    }   
+		       }
             }
-        }        
+        }
+    }
+    post { 
+        success {
+            archiveArtifacts artifacts: '**/target/springbootjava17.jar', allowEmptyArchive: true
+        }
+    }        
 }
