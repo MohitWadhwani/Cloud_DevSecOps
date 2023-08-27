@@ -4,9 +4,9 @@ pipeline {
         // Specify the Maven installation
         maven 'Maven'
     }
-    // environment {
-    //     MVN_VERSION = powershell(returnStdout: true, script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout').trim()
-    // }
+    environment {
+        MVN_VERSION = powershell(returnStdout: true, script: 'mvn help:evaluate -Dexpression=project.version -f springbootjava17/pom.xml -q -DforceStdout').trim()
+    }
     stages {
         // stage('git checkout'){
         //     steps{
@@ -15,12 +15,12 @@ pipeline {
         // }  
         stage("Build"){
             steps {
-                bat "mvn clean package -f pom.xml" 
+                bat "mvn clean package -f springbootjava17/pom.xml" 
             }
         }
         stage("build docker image"){
 		    steps {
-                bat "docker build -t 8458882343/springbootjava17:latest -f Dockerfile ."
+                bat "docker build -t 8458882343/springbootjava17:${MVN_VERSION} -f springbootjava17/Dockerfile ."
 		    }
 		}
     //     stage("Push docker image"){
